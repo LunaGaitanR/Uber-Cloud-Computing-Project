@@ -2,14 +2,34 @@
 
 % --------------------------------------------------
 % Responsible:
-% 
+% Luna Gaitán
 % --------------------------------------------------
 
 \subsection{Application Overview}
 
-% Content to be completed.
+This project defines the requirements and workload model for building a global ride-sharing platform from scratch, inspired by the core capabilities of large-scale services such as Uber. The platform is designed as a two-sided marketplace that connects riders requesting transportation with independent drivers providing vehicle capacity in real time. Rather than owning or directly operating the vehicles, the system is responsible for coordinating the interaction between both sides of the marketplace, from ride request and driver matching to trip tracking, payment settlement, feedback, and safety support.
+
+The platform must provide a complete end-to-end ride experience. A rider should be able to authenticate, specify a pickup location and destination, receive an estimated fare and arrival time, request a ride, and be matched with an eligible nearby driver. The driver must be able to complete the onboarding and verification process, manage availability, receive and accept ride offers, navigate to the pickup location, and perform the trip. Once the trip is completed, the platform calculates the final fare, coordinates payment and driver settlement, issues a receipt, and records the corresponding trip and earnings information. The platform also provides rating, feedback, support, and safety-case management capabilities.
+
+The system therefore acts as the central coordination layer for a geographically distributed transportation marketplace. Its scope includes account and driver management, real-time matching and dispatch, trip lifecycle management, dynamic pricing, fare calculation and settlement orchestration, real-time tracking, ratings and reputation, support and safety workflows, notification orchestration, marketplace operations, and fraud/risk logic. External services such as payment processing, identity verification, mapping data, message delivery, user devices, and network connectivity remain outside the system boundary. This separation allows the platform to focus on the capabilities it directly controls while integrating with specialized external providers.
+
+The platform is intended to operate at global scale. The workload model establishes a baseline of approximately 250,000 concurrent users under average conditions and more than 500,000 concurrent users during peak periods. The system must sustain approximately 45 million requests per hour under normal conditions and up to 120 million requests per hour during high-demand periods, with peak workloads lasting approximately three to four hours. These requirements are complemented by a target of 99.99% annual availability and a 95th-percentile response time below 500 milliseconds for latency-sensitive interactive operations. The system is also expected to accommodate an estimated initial data volume of 20 TB and approximately 15 TB of additional data growth per year.
 
 
 \subsection{Key Distributed Systems Challenges}
 
-% Content to be completed.
+Building this platform from scratch is primarily a distributed-systems challenge because the system must coordinate a continuously changing, geographically distributed marketplace while maintaining different levels of correctness for different types of data.
+
+First, driver availability and rider demand represent perishable, real-time resources. A driver who is idle in one location cannot be reused later for the same opportunity, and a rider's request must be matched while the driver and rider are still available. Consequently, matching and dispatch cannot rely on slow batch processing; they require low-latency, continuously updated state.
+
+Second, the system must perform local geographic decisions at global scale. A ride request normally needs to consider drivers within a relatively small geographic area, but thousands of such decisions may occur simultaneously across cities and regions. The workload therefore requires efficient spatial indexing, rapid driver discovery, and geographically distributed processing. The workload model also assumes frequent driver telemetry updates, with active drivers periodically sending their current geographic position, creating a write-intensive workload.
+
+Third, the platform must tolerate highly variable and bursty demand. Normal commuting periods can produce predictable increases in traffic, while events or other localized conditions can generate sudden surges concentrated in specific geographic areas. The system must therefore scale its processing capacity without significantly degrading matching latency, tracking, or other interactive operations.
+
+Fourth, different components of the platform have different consistency requirements. Driver location and availability information prioritize freshness, low latency, and availability, and some temporary inconsistency may be tolerable. In contrast, trip state, payment processing, driver earnings, and settlement require stronger correctness guarantees. A duplicate payment or inconsistent settlement cannot be treated in the same way as a slightly stale location update. The architecture must therefore support multiple consistency and reliability requirements within the same overall system.
+
+Fifth, the platform must remain operational despite failures in individual components or geographic regions. The target of 99.99% availability requires redundancy and failure-handling mechanisms capable of preserving critical operations when infrastructure becomes unavailable. Active trips, matching state, and payment-related information must be protected against failures without compromising the integrity of the system.
+
+Finally, trust, safety, and security are fundamental system requirements rather than secondary features. The platform connects strangers and processes financial transactions, requiring driver verification, controlled access to trip information, ratings and reputation mechanisms, fraud detection, and support workflows for incidents and disputes. These capabilities must operate together with the real-time marketplace rather than being added independently after the core system is designed.
+
+Overall, the system must solve the problem of coordinating a large, geographically distributed, real-time marketplace while simultaneously meeting strict requirements for latency, availability, scalability, correctness, and safety. The functional requirements, non-functional requirements, and workload model presented in the remainder of this document translate these challenges into measurable system requirements. These requirements provide the foundation for the subsequent architectural design and technology decisions needed to build the platform from scratch.
